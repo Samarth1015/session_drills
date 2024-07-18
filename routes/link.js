@@ -2,23 +2,14 @@ const express = require("express");
 const router = express.Router();
 const { Url } = require("../models/url");
 const { default: mongoose } = require("mongoose");
+const { isLoggedin } = require("../autentication");
 
 const wrapAsync = require("../wrapasync");
+const controllerUrl = require("../controller/urls");
 
 router
   .route("/")
-  .get(
-    wrapAsync(async (req, res, next) => {
-      const links = await Url.find({});
-      res.render("index.ejs", { links });
-    })
-  )
-  .post(async (req, res) => {
-    let { url } = req.body;
-    const newUrl = new Url({ url: url });
-    await newUrl.save();
-
-    res.redirect("/link");
-  });
+  .get(isLoggedin, wrapAsync(controllerUrl.index))
+  .post(wrapAsync(controllerUrl.adding));
 
 module.exports = router;
