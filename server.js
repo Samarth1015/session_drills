@@ -5,6 +5,7 @@ const User = require("./models/user");
 const cookie = require("cookieparser");
 const router = express.Router();
 require("dotenv").config();
+const GitHubStrategy = require("passport-github2");
 
 const { v4: uuidv4 } = require("uuid");
 const session = require("express-session");
@@ -46,6 +47,41 @@ passport.deserializeUser((user, cb) => {
       cb(err);
     });
 });
+//github
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: "http://localhost:8080/auth/github/callback",
+    },
+    async function (accessToken, refreshToken, profile, done) {
+      console.log("profile:", profile); // Log the profile object to inspect its structure
+
+      let email = null;
+      if (profile.emails && profile.emails.length > 0) {
+        email = profile.emails[0].value;
+      }
+
+      try {
+        const user = await User.findOneAndUpdate(
+          { githubId: profile.id },
+          {
+            githubId: profile.id,
+            username: profile.username,
+            name: profile.displayName,
+            email: email,
+            provider: "github",
+          },
+          { upsert: true, new: true }
+        );
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
+    }
+  )
+);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -87,6 +123,14 @@ passport.use(
   )
 );
 
+app.get(
+  "/auth/github/callback",
+  passport.authenticate("github", { failureRedirect: "/login" }),
+  function (req, res) {
+    // Successful authentication, redirect home.
+    res.redirect("/link");
+  }
+);
 const link = require("./routes/link");
 app.get(
   "/oauth2/redirect/google",

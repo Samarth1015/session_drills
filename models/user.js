@@ -19,6 +19,9 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
   },
+  githubId: {
+    type: String,
+  },
 });
 
 userSchema.plugin(passportLoacalMongoose);
